@@ -22,7 +22,12 @@ namespace TasksApp{
 
     class MyTasksCli{
         const string FILE_PATH = "tasks.json";
-        const string HELP_MESSAGE =
+
+
+        static void printHelp(string oneMore)
+        {
+            Console.WriteLine(oneMore);
+            Console.WriteLine(
         """
         I have these comands:
 
@@ -35,7 +40,9 @@ namespace TasksApp{
         update ID NEWTASK - change the task description from the ID to the NEWTASK description. 
 
         mark ID NEWSTATUS - change the task status from the ID to the NEWSTATUS status.
-        """;
+        """
+        );
+        }
 
         static List<Task> getTasks(string fileContent){
             List<Task> tasks = new();
@@ -117,9 +124,7 @@ namespace TasksApp{
             }
 
             if (args.Length == 0){
-                Console.WriteLine("no command specified");
-                Console.WriteLine(HELP_MESSAGE);
-
+                printHelp("no command specified");
                 return;
             }
 
@@ -129,9 +134,15 @@ namespace TasksApp{
 
             switch(command){
                 case "help":
-                    Console.WriteLine(HELP_MESSAGE);
+                    printHelp("");
                     break;
                 case "add":
+                    if (args.Length == 1)
+                    {
+                        printHelp("no task description specified");
+                        return;
+                    }
+
                     int i = 0;
 
                     if (len == 0){
@@ -181,8 +192,7 @@ namespace TasksApp{
                             ind = findId(tasks, int.Parse(args[1]));
                         }
                         catch{
-                            Console.WriteLine("bad id value");
-                            Console.WriteLine(HELP_MESSAGE);
+                            printHelp("bad id value");
 
                             return;
                         }
@@ -206,8 +216,7 @@ namespace TasksApp{
                             giveTasks(tasks);
                         }
                         else{
-                            Console.WriteLine("I don't know this command or this command usage");
-                            Console.WriteLine(HELP_MESSAGE);
+                            printHelp("I don't know this command or this command usage");
                         }
                     }
                     break;
@@ -216,3 +225,4 @@ namespace TasksApp{
         }
     }
 }
+
