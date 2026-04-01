@@ -23,7 +23,6 @@ namespace TasksApp{
     class MyTasksCli{
         const string FILE_PATH = "tasks.json";
 
-
         static void printHelp(string oneMore)
         {
             Console.WriteLine(oneMore);
@@ -103,8 +102,18 @@ namespace TasksApp{
             File.WriteAllText(FILE_PATH, json + "}\n");
         }
 
-        static int findId(List<Task> tasks, int id){
+        static int getIndex(List<Task> tasks, string strId){
             int left = 0, right = tasks.Count - 1;
+            int id;
+
+            try
+            {
+                id = int.Parse(strId);
+            }
+            catch
+            {
+                return -2;
+            }
 
             while (left <= right){
                 int mid = left + (right - left) / 2;
@@ -129,6 +138,7 @@ namespace TasksApp{
             }
 
             string fileContent = File.ReadAllText(FILE_PATH), command = args[0];
+            string[] INDEX_REQUIRES = ["remove", "update", "mark"];
             List<Task> tasks = getTasks(fileContent);
             int len = tasks.Count;
 
@@ -168,37 +178,35 @@ namespace TasksApp{
                     Console.WriteLine("added task with id " + (i + 1).ToString());
 
                     break;
-                default:
-                    if (len == 0){
+
+                case "ls":
+                    if (len == 0)
+                    {
                         Console.WriteLine("no tasks yet");
-                        return;
                     }
-                    else if (command == "ls"){
-                        foreach (Task task in tasks){
-                            if (args.Length < 2 || args[1] == task.status){
-                                Console.WriteLine("Id: " + task.id);
-                                Console.WriteLine("Task: " + task.task);
-                                Console.WriteLine("Status: " + task.status);
-                                Console.WriteLine("Updated at: " + task.updatedAt);
-                                Console.WriteLine("Created at: " + task.createdAt);
-                                Console.WriteLine();
-                            }
+                    else foreach (Task task in tasks){
+                        if (args.Length < 2 || args[1] == task.status){
+                            Console.WriteLine("Id: " + task.id);
+                            Console.WriteLine("Task: " + task.task);
+                            Console.WriteLine("Status: " + task.status);
+                            Console.WriteLine("Updated at: " + task.updatedAt);
+                            Console.WriteLine("Created at: " + task.createdAt);
+                            Console.WriteLine();
                         }
                     }
-                    else{
+                    break;
+
+                default:
+                    if (INDEX_REQUIRES.Contains(command))
+                    {
                         int ind;
-
-                        try{
-                            ind = findId(tasks, int.Parse(args[1]));
-                        }
-                        catch{
-                            printHelp("bad id value");
-
-                            return;
-                        }
+                        ind = getIndex(tasks, args[1]);
 
                         if (ind == -1){
                             Console.WriteLine("task not found");
+                        }
+                        else if (ind == -2){
+                            Console.WriteLine("bad id value");
                         }
                         else if (command == "remove"){
                             tasks.RemoveAt(ind);
@@ -216,11 +224,15 @@ namespace TasksApp{
                             giveTasks(tasks);
                         }
                         else{
-                            printHelp("I don't know this command or this command usage");
+                            printHelp("I don't know this command usage");
                         }
                     }
+                    else
+                    {
+                        printHelp(command + ": I don't know this command");
+                    }
                     break;
-
+                    
             }
         }
     }
