@@ -1,5 +1,5 @@
 using System.Text.Json;
-
+// TODO: add interacrive mode 
 namespace TasksApp{
     public class Task{
         public int id {get; set;}
@@ -102,7 +102,7 @@ namespace TasksApp{
             File.WriteAllText(FILE_PATH, json + "}\n");
         }
 
-        static int getIndex(List<Task> tasks, string strId){
+        static int getIndex(List<Task> tasks, string strId, bool help=true){
             int left = 0, right = tasks.Count - 1;
             int id;
 
@@ -112,17 +112,20 @@ namespace TasksApp{
             }
             catch
             {
+                Console.WriteLine(strId + ": bad id value");
+                if (help) printHelp("");
                 return -2;
             }
 
             while (left <= right){
                 int mid = left + (right - left) / 2;
-                
+
                 if (tasks[mid].id == id) return mid;
                 if (tasks[mid].id < id) left = mid + 1;
                 else right = mid - 1;
             }
 
+            Console.WriteLine(strId + ": task not found");
             return -1;
         }
 
@@ -143,10 +146,11 @@ namespace TasksApp{
             int len = tasks.Count;
 
             switch(command){
-                case "help":
+                case "help":{
                     printHelp("");
                     break;
-                case "add":
+                }
+                case "add":{
                     if (args.Length == 1)
                     {
                         printHelp("no task description specified");
@@ -154,38 +158,49 @@ namespace TasksApp{
                     }
 
                     int i = 0;
-
+                    Task task;
+                    
+                    string status = "todo";
+                    if (args.Length > 2) status = args[2];
+                    
                     if (len == 0){
-                        Task task = new(1, args[1], "todo", DateTime.Now.ToString(), DateTime.Now.ToString());
+                        task = new(1, args[1], status, DateTime.Now.ToString(), DateTime.Now.ToString());
                         File.WriteAllText(FILE_PATH, '{' + JsonSerializer.Serialize(task) + "}\n");
                     }
                     else{
-                        string status = "todo";
-
-                        if (args.Length > 2) status = args[2];
-
                         // go while there's the "1, 2, 3.." sequence
                         while (i < len && i + 1 == tasks[i].id){
                             i++;
                         }
 
-                        Task task = new(i + 1, args[1], status, DateTime.Now.ToString(), DateTime.Now.ToString());
+                        task = new(i + 1, args[1], status, DateTime.Now.ToString(), DateTime.Now.ToString());
                         tasks.Insert(i, task);
 
                         giveTasks(tasks);
                     }
 
-                    Console.WriteLine("added task with id " + (i + 1).ToString());
+                    Console.WriteLine("added task with id " + (i + 1).ToString() + " and status " + status);
 
                     break;
+                }
 
-                case "ls":
+                case "ls":{
                     if (len == 0)
                     {
                         Console.WriteLine("no tasks yet");
                     }
                     else foreach (Task task in tasks){
-                        if (args.Length < 2 || args[1] == task.status){
+                        bool contains = false;
+
+                        for (int i = 1; i < args.Length; i++)
+                        {
+                            if (args[i] == task.status)
+                            {
+                                contains = true;
+                                break;
+                            }
+                        }
+                        if (args.Length < 2 || contains){
                             Console.WriteLine("Id: " + task.id);
                             Console.WriteLine("Task: " + task.task);
                             Console.WriteLine("Status: " + task.status);
@@ -195,44 +210,43 @@ namespace TasksApp{
                         }
                     }
                     break;
+                }
 
-                default:
-                    if (INDEX_REQUIRES.Contains(command))
-                    {
-                        int ind;
-                        ind = getIndex(tasks, args[1]);
-
-                        if (ind == -1){
-                            Console.WriteLine("task not found");
-                        }
-                        else if (ind == -2){
-                            Console.WriteLine("bad id value");
-                        }
-                        else if (command == "remove"){
-                            tasks.RemoveAt(ind);
-                            giveTasks(tasks);
-                        }
-                        else if (args.Length > 2){
-                            if (command == "update"){
-                                tasks[ind].task = args[2];      
-                            }
-                            else if (command == "mark"){
-                                tasks[ind].status = args[2];
-                            }
-
-                            tasks[ind].updatedAt = DateTime.Now.ToString();
-                            giveTasks(tasks);
-                        }
-                        else{
-                            printHelp("I don't know this command usage");
-                        }
-                    }
-                    else
+                default:{
+                    if (!INDEX_REQUIRES.Contains(command))
                     {
                         printHelp(command + ": I don't know this command");
+                        return;
                     }
+
+                    if (command == "remove"){
+                        for (int i = 1; i < args.Length; i++)
+                        {
+                            tasks.RemoveAt(getIndex(tasks, args[i], false));
+                            giveTasks(tasks);
+                        }
+                    }
+                    else if (args.Length > 2){
+                        int ind = getIndex(tasks, args[1]);
+
+                        if (ind < 0) return;
+
+                        if (command == "update"){
+                            tasks[ind].task = args[2];      
+                        }
+                        else if (command == "mark"){
+                            tasks[ind].status = args[2];
+                        }
+
+                        tasks[ind].updatedAt = DateTime.Now.ToString();
+                        giveTasks(tasks);
+                    }
+                    else{
+                        printHelp("I don't know this command usage");
+                    }
+                        
                     break;
-                    
+                }
             }
         }
     }
