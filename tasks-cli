@@ -1,1 +1,17 @@
-dotnet run $@
+#!/bin/bash
+
+if [ $# -ne 0 ]; then
+    dotnet run $@
+    exit 0
+fi
+
+myPrompt="(tasks-cli) "
+
+while :
+do
+    echo -n "$myPrompt "
+    if ! read -r line; then
+        exit 0
+    fi
+    dotnet run $line
+done

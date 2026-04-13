@@ -1,5 +1,5 @@
 using System.Text.Json;
-// TODO: add interacrive mode 
+
 namespace TasksApp{
     public class Task{
         public int id {get; set;}
