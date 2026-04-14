@@ -30,13 +30,15 @@ namespace TasksApp{
         """
         I have these comands:
 
-        ls STATUS - list the tasks that have the status STATUS. If STATUS is not specified, list all tasks.
+        help - print this help
+
+        list/ls STATUS - list the tasks that have the status STATUS. If STATUS is not specified, list all tasks.
 
         add TASK STATUS - add a task with the specified TASK description and with specified STATUS status. If STATUS is not specified, the default status is "todo".
 
-        remove ID - remove a task with the specified ID.
+        remove/rm ID - remove a task with the specified ID.
 
-        update ID NEWTASK - change the task description from the ID to the NEWTASK description. 
+        update/upd ID NEWTASK - change the task description from the ID to the NEWTASK description. 
 
         mark ID NEWSTATUS - change the task status from the ID to the NEWSTATUS status.
         """
@@ -104,7 +106,9 @@ namespace TasksApp{
 
         static int getIndex(List<Task> tasks, string strId, bool help=true){
             int left = 0, right = tasks.Count - 1;
-            int id;
+            int id = -1;
+
+            bool bad = false;
 
             try
             {
@@ -112,6 +116,10 @@ namespace TasksApp{
             }
             catch
             {
+                bad = true;
+            }
+
+            if (bad || id < 1){
                 Console.WriteLine(strId + ": bad id value");
                 if (help) printHelp("");
                 return -2;
@@ -140,8 +148,8 @@ namespace TasksApp{
                 return;
             }
 
-            string fileContent = File.ReadAllText(FILE_PATH), command = args[0];
-            string[] INDEX_REQUIRES = ["remove", "update", "mark"];
+            string fileContent = File.ReadAllText(FILE_PATH), command = args[0].ToLower();
+            string[] INDEX_REQUIRES = ["remove", "update", "upd", "mark"];
             List<Task> tasks = getTasks(fileContent);
             int len = tasks.Count;
 
@@ -184,6 +192,7 @@ namespace TasksApp{
                     break;
                 }
 
+                case "list":
                 case "ls":{
                     if (len == 0)
                     {
@@ -219,7 +228,7 @@ namespace TasksApp{
                         return;
                     }
 
-                    if (command == "remove"){
+                    if (command == "remove" || command == "rm"){
                         for (int i = 1; i < args.Length; i++)
                         {
                             tasks.RemoveAt(getIndex(tasks, args[i], false));
@@ -231,7 +240,7 @@ namespace TasksApp{
 
                         if (ind < 0) return;
 
-                        if (command == "update"){
+                        if (command == "update" || command == "upd"){
                             tasks[ind].task = args[2];      
                         }
                         else if (command == "mark"){

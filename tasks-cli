@@ -10,8 +10,13 @@ myPrompt="(tasks-cli) "
 while :
 do
     echo -n "$myPrompt "
-    if ! read -r line; then
+    read -r line
+    line=${line,,}
+    if [[ $? -eq 1 || "$line" == "q" || "$line" == "quit" ]]; then
+        echo
         exit 0
     fi
-    dotnet run $line
+    if [[ -n "$line" ]]; then
+        dotnet run $line
+    fi
 done
