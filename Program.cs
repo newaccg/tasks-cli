@@ -32,11 +32,11 @@ namespace TasksApp{
 
         help - print this help
 
-        list/ls STATUS - list the tasks that have the status STATUS. If STATUS is not specified, list all tasks.
+        list/ls [STATUS STATUS ...] - list the tasks that have the status STATUSes. If STATUSes is not specified, list all tasks.
 
         add TASK STATUS - add a task with the specified TASK description and with specified STATUS status. If STATUS is not specified, the default status is "todo".
 
-        remove/rm ID - remove a task with the specified ID.
+        remove/rm [ID ID ...] - remove a task with the specified IDs.
 
         update/upd ID NEWTASK - change the task description from the ID to the NEWTASK description. 
 
@@ -149,9 +149,9 @@ namespace TasksApp{
             }
 
             string fileContent = File.ReadAllText(FILE_PATH), command = args[0].ToLower();
-            string[] INDEX_REQUIRES = ["remove", "update", "upd", "mark"];
+            string[] INDEX_REQUIRES = ["remove", "rm", "update", "upd", "mark"];
             List<Task> tasks = getTasks(fileContent);
-            int len = tasks.Count;
+            int len = tasks.Count, argc = args.Length;
 
             switch(command){
                 case "help":{
@@ -159,9 +159,9 @@ namespace TasksApp{
                     break;
                 }
                 case "add":{
-                    if (args.Length == 1)
+                    if (argc == 1)
                     {
-                        printHelp("no task description specified");
+                        printHelp(command + ": no task description specified");
                         return;
                     }
 
@@ -169,7 +169,7 @@ namespace TasksApp{
                     Task task;
                     
                     string status = "todo";
-                    if (args.Length > 2) status = args[2];
+                    if (argc > 2) status = args[2];
                     
                     if (len == 0){
                         task = new(1, args[1], status, DateTime.Now.ToString(), DateTime.Now.ToString());
@@ -201,7 +201,7 @@ namespace TasksApp{
                     else foreach (Task task in tasks){
                         bool contains = false;
 
-                        for (int i = 1; i < args.Length; i++)
+                        for (int i = 1; i < argc; i++)
                         {
                             if (args[i] == task.status)
                             {
@@ -209,7 +209,7 @@ namespace TasksApp{
                                 break;
                             }
                         }
-                        if (args.Length < 2 || contains){
+                        if (argc < 2 || contains){
                             Console.WriteLine("Id: " + task.id);
                             Console.WriteLine("Task: " + task.task);
                             Console.WriteLine("Status: " + task.status);
@@ -225,10 +225,11 @@ namespace TasksApp{
                     if (!INDEX_REQUIRES.Contains(command))
                     {
                         printHelp(command + ": I don't know this command");
-                        return;
                     }
-
-                    if (command == "remove" || command == "rm"){
+                    else if (argc < 2){
+                        printHelp(command + ": id not specified");
+                    } // if argc >= 2 (remove can takes 2 args unlike other INDEX_REQUIRES) 
+                    else if (command == "remove" || command == "rm"){
                         for (int i = 1; i < args.Length; i++)
                         {
                             tasks.RemoveAt(getIndex(tasks, args[i], false));
@@ -251,7 +252,7 @@ namespace TasksApp{
                         giveTasks(tasks);
                     }
                     else{
-                        printHelp("I don't know this command usage");
+                        printHelp(command + ": new status/description not specified");
                     }
                         
                     break;

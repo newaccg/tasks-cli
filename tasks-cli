@@ -11,8 +11,9 @@ while :
 do
     echo -n "$myPrompt "
     read -r line
+    code=$?
     line=${line,,}
-    if [[ $? -eq 1 || "$line" == "q" || "$line" == "quit" ]]; then
+    if [[ $code -eq 1 || "$line" == "q" || "$line" == "quit" ]]; then
         echo
         exit 0
     fi
