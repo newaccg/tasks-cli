@@ -222,6 +222,8 @@ namespace TasksApp{
                 }
 
                 default:{
+                    int ind;
+
                     if (!INDEX_REQUIRES.Contains(command))
                     {
                         printHelp(command + ": I don't know this command");
@@ -232,12 +234,15 @@ namespace TasksApp{
                     else if (command == "remove" || command == "rm"){
                         for (int i = 1; i < args.Length; i++)
                         {
-                            tasks.RemoveAt(getIndex(tasks, args[i], false));
-                            giveTasks(tasks);
+                            ind = getIndex(tasks, args[i], false);
+                            if (ind >= 0){
+                                 tasks.RemoveAt(ind);
+                                 giveTasks(tasks);
+                            }
                         }
                     }
                     else if (args.Length > 2){
-                        int ind = getIndex(tasks, args[1]);
+                        ind = getIndex(tasks, args[1]);
 
                         if (ind < 0) return;
 
