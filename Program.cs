@@ -21,10 +21,7 @@ namespace TasksApp{
     }
 
     class MyTasksCli{
-        const string FILE_PATH = "tasks.json";
-
-        static void printHelp(string oneMore)
-        {
+        static void printHelp(string oneMore){
             Console.WriteLine(oneMore);
             Console.WriteLine(
         """
@@ -45,53 +42,7 @@ namespace TasksApp{
         );
         }
 
-        static List<Task> getTasks(string fileContent){
-            List<Task> tasks = new();
-            string curJson = "";
-
-            bool bad = true;
-
-            // -2, i = 1 because it has useless "}\n" and "{" at the end and at the begin
-            for (int i = 1; i < fileContent.Length - 2; i++){
-                curJson += fileContent[i];
-
-                if (fileContent[i] == '}')
-                {
-                    // if file contains at least one "}" it can be not bad
-                    bad = false;
-
-                    Task? task;
-                    try{
-                        task = JsonSerializer.Deserialize<Task>(curJson);
-                    }
-                    catch{
-                        bad = true;
-                        break;
-                    }
-
-#pragma warning disable CS8604 // disable possible null reference argument warning
-                    tasks.Add(task);
-#pragma warning restore CS8604 
-
-                    curJson = "";
-                    // for skipping the next ','
-                    i++;
-                }
-            }
-
-            if (bad && curJson.Length != 0){
-                Console.WriteLine("!!!!WARNING!!!!");
-                Console.WriteLine("CORRUPTED PART OF JSON FILE:");
-                Console.WriteLine(curJson);
-                Console.WriteLine("WRITING NEW EMPTY JSON FILE");
-
-                File.WriteAllText(FILE_PATH, "{}\n");
-            }
-
-            return tasks;
-        }
-
-        static void giveTasks(List<Task> tasks){
+        static void giveTasks(List<Task> tasks, string FILE_PATH){
             string json = "{";
 
             if (tasks.Count != 0)
@@ -108,18 +59,7 @@ namespace TasksApp{
             int left = 0, right = tasks.Count - 1;
             int id = -1;
 
-            bool bad = false;
-
-            try
-            {
-                id = int.Parse(strId);
-            }
-            catch
-            {
-                bad = true;
-            }
-
-            if (bad || id < 1){
+            if (!int.TryParse(strId, out id) || id < 1){
                 Console.WriteLine(strId + ": bad id value");
                 if (help) printHelp("");
                 return -2;
@@ -138,29 +78,80 @@ namespace TasksApp{
         }
 
         static void Main(string[] args){
-            if (!File.Exists(FILE_PATH)){
-                File.Create(FILE_PATH).Close();
-                File.WriteAllText(FILE_PATH, "{}\n");
-            }
-
             if (args.Length == 0){
                 printHelp("no command specified");
                 return;
             }
 
-            string fileContent = File.ReadAllText(FILE_PATH), command = args[0].ToLower();
-            string[] INDEX_REQUIRES = ["remove", "rm", "update", "upd", "mark"];
-            List<Task> tasks = getTasks(fileContent);
+            string[] COMMANDS = ["help", "remove", "rm", "update", "upd", "mark", "add", "list", "ls"];
+            string FILE_PATH = "tasks.json";
+            string command = args[0].ToLower();
+
+            if (!COMMANDS.Contains(command)){
+                printHelp(command + ": I don't know this command");
+                return;
+            }
+
+            FILE_PATH = Path.Combine(AppContext.BaseDirectory, FILE_PATH);
+            
+            if (!File.Exists(FILE_PATH)){
+                File.Create(FILE_PATH).Close();
+                File.WriteAllText(FILE_PATH, "{}\n");
+            }
+
+            string curJson = "";
+            string fileContent = File.ReadAllText(FILE_PATH); 
+           
+            List<Task> tasks = new();
+           
+            bool bad = true;
+
+            // get tasks from the json file
+            // -2, i = 1 because it has useless "}\n" and "{" at the end and at the begin
+            for (int i = 1; i < fileContent.Length - 2; i++){
+                curJson += fileContent[i];
+
+                if (fileContent[i] == '}')
+                {
+                    // if file contains at least one "}" it can be not bad
+                    bad = false;
+
+                    try{
+#pragma warning disable CS8604 // disable possible null reference argument warning
+                        tasks.Add(JsonSerializer.Deserialize<Task>(curJson));
+#pragma warning restore CS8604 
+                    }
+                    catch{
+                        bad = true;
+                        break;
+                    }
+
+
+                    curJson = "";
+                    // for skipping the next ','
+                    i++;
+                }
+            }
+
             int len = tasks.Count, argc = args.Length;
 
+            if (bad && curJson.Length != 0){
+                Console.WriteLine("!!!!WARNING!!!!");
+                Console.WriteLine("CORRUPTED PART OF JSON FILE:");
+                Console.WriteLine(curJson);
+                Console.WriteLine("WRITING NEW EMPTY JSON FILE");
+
+                File.WriteAllText(FILE_PATH, "{}\n");
+            }
+
+            // commands those not require id
             switch(command){
                 case "help":{
                     printHelp("");
-                    break;
+                    return;
                 }
                 case "add":{
-                    if (argc == 1)
-                    {
+                    if (argc == 1){
                         printHelp(command + ": no task description specified");
                         return;
                     }
@@ -184,83 +175,70 @@ namespace TasksApp{
                         task = new(i + 1, args[1], status, DateTime.Now.ToString(), DateTime.Now.ToString());
                         tasks.Insert(i, task);
 
-                        giveTasks(tasks);
+                        giveTasks(tasks, FILE_PATH);
                     }
 
                     Console.WriteLine("added task with id " + (i + 1).ToString() + " and status " + status);
 
-                    break;
+                    return;
                 }
+            }
 
-                case "list":
-                case "ls":{
-                    if (len == 0)
+            if (len == 0){
+                Console.WriteLine("no tasks yet");
+            }
+            else if (command == "ls" || command == "list"){
+                foreach (Task task in tasks){
+                    bool contains = false;
+
+                    for (int i = 1; i < argc; i++)
                     {
-                        Console.WriteLine("no tasks yet");
-                    }
-                    else foreach (Task task in tasks){
-                        bool contains = false;
-
-                        for (int i = 1; i < argc; i++)
+                        if (args[i] == task.status)
                         {
-                            if (args[i] == task.status)
-                            {
-                                contains = true;
-                                break;
-                            }
-                        }
-                        if (argc < 2 || contains){
-                            Console.WriteLine("Id: " + task.id);
-                            Console.WriteLine("Task: " + task.task);
-                            Console.WriteLine("Status: " + task.status);
-                            Console.WriteLine("Updated at: " + task.updatedAt);
-                            Console.WriteLine("Created at: " + task.createdAt);
-                            Console.WriteLine();
+                            contains = true;
+                            break;
                         }
                     }
-                    break;
+                    if (argc < 2 || contains){
+                        Console.WriteLine("Id: " + task.id);
+                        Console.WriteLine("Task: " + task.task);
+                        Console.WriteLine("Status: " + task.status);
+                        Console.WriteLine("Updated at: " + task.updatedAt);
+                        Console.WriteLine("Created at: " + task.createdAt);
+                        Console.WriteLine();
+                    }
                 }
-
-                default:{
-                    int ind;
-
-                    if (!INDEX_REQUIRES.Contains(command))
-                    {
-                        printHelp(command + ": I don't know this command");
-                    }
-                    else if (argc < 2){
-                        printHelp(command + ": id not specified");
-                    } // if argc >= 2 (remove can takes 2 args unlike other INDEX_REQUIRES) 
-                    else if (command == "remove" || command == "rm"){
-                        for (int i = 1; i < args.Length; i++)
-                        {
-                            ind = getIndex(tasks, args[i], false);
-                            if (ind >= 0){
-                                 tasks.RemoveAt(ind);
-                                 giveTasks(tasks);
-                            }
+            } // commands those require id
+            else{ 
+                if (argc < 2){
+                    printHelp(command + ": id not specified");
+                } // if argc >= 2 (remove can takes 2 args unlike others) 
+                else if (command == "remove" || command == "rm"){
+                    for (int i = 1; i < args.Length; i++){
+                        int ind = getIndex(tasks, args[i], false);
+                        if (ind >= 0){
+                             tasks.RemoveAt(ind);
+                             giveTasks(tasks, FILE_PATH);
                         }
                     }
-                    else if (args.Length > 2){
-                        ind = getIndex(tasks, args[1]);
+                }
+                else if (argc > 2){
+                    int ind = getIndex(tasks, args[1]);
 
-                        if (ind < 0) return;
+                    if (ind < 0) return;
 
-                        if (command == "update" || command == "upd"){
-                            tasks[ind].task = args[2];      
-                        }
-                        else if (command == "mark"){
-                            tasks[ind].status = args[2];
-                        }
-
-                        tasks[ind].updatedAt = DateTime.Now.ToString();
-                        giveTasks(tasks);
+                    if (command == "update" || command == "upd"){
+                        tasks[ind].task = args[2];      
                     }
-                    else{
-                        printHelp(command + ": new status/description not specified");
+                    else if (command == "mark"){
+                        tasks[ind].status = args[2];
                     }
-                        
-                    break;
+
+                    tasks[ind].updatedAt = DateTime.Now.ToString();
+                    giveTasks(tasks, FILE_PATH);
+                }
+                else{
+                    printHelp(command + ": new status/description not specified");
                 }
             }
         }
